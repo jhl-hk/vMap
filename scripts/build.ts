@@ -1,7 +1,7 @@
 // Build dist/: hashed assets, inlined CSS, precompressed .br/.gz copies for the static server.
 import { createHash } from 'node:crypto';
 import { mkdirSync, readFileSync, readdirSync, rmSync, statSync, watch, writeFileSync } from 'node:fs';
-import { join } from 'node:path';
+import { basename, join } from 'node:path';
 import { brotliCompressSync, constants, gzipSync } from 'node:zlib';
 
 const ROOT = join(import.meta.dir, '..');
@@ -47,7 +47,7 @@ async function build() {
     throw new Error('bundle failed');
   }
   const js = out.outputs.find((o) => o.path.endsWith('.js'))!;
-  const jsUrl = '/assets/' + js.path.split('/').pop();
+  const jsUrl = '/assets/' + basename(js.path);
   const css = minifyCss(readFileSync(join(ROOT, 'src/style.css'), 'utf8'));
   const html = readFileSync(join(ROOT, 'index.html'), 'utf8')
     .replace('<!--STYLE-->', `<style>${css}</style>\n  <link rel="preload" href="${campus}" as="fetch" crossorigin>\n  <link rel="preload" href="${ground}" as="fetch" crossorigin>`)
@@ -67,7 +67,7 @@ async function build() {
     } else totalBr += b.length;
   }
   const kb = (n: number) => (n / 1024).toFixed(1) + ' KB';
-  console.log(`built in ${(performance.now() - t0).toFixed(0)} ms: ${files.map((f) => `${f.split('/').pop()} ${kb(statSync(f).size)}`).join(', ')}`);
+  console.log(`built in ${(performance.now() - t0).toFixed(0)} ms: ${files.map((f) => `${basename(f)} ${kb(statSync(f).size)}`).join(', ')}`);
   console.log(`total ${kb(total)}, over the wire ~${kb(totalBr)}`);
 }
 
