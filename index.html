@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+  <meta name="color-scheme" content="dark" />
+  <meta name="theme-color" content="#1b1b22" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <title>像素北科</title>
+  <meta name="description" content="像素北科：像素画风的北京科技大学校园地图，按 1:1 比例绘制学院路校区的楼宇、道路与树木，可多人同时在线游览。" />
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' shape-rendering='crispEdges'%3E%3Crect width='16' height='16' fill='%23004ea2'/%3E%3Crect x='3' y='3' width='10' height='2' fill='%23fff'/%3E%3Crect x='7' y='5' width='2' height='8' fill='%23fff'/%3E%3Crect x='3' y='11' width='10' height='2' fill='%23f2c94c'/%3E%3C/svg%3E" />
+  <!--STYLE-->
+</head>
+<body>
+  <div id="app">
+    <canvas id="game"></canvas>
+    <canvas id="hud"></canvas>
+    <div id="joy" hidden><div></div></div>
+
+    <header id="mapbar" class="bar">
+      <div class="brand">
+        <b>像素北科</b>
+        <span>北京科技大学 · 学院路校区</span>
+      </div>
+      <div class="row">
+        <button id="zoomOut" class="pbtn sq" aria-label="缩小">－</button>
+        <button id="zoomIn" class="pbtn sq" aria-label="放大">＋</button>
+        <button id="locate" class="pbtn">我的位置</button>
+      </div>
+    </header>
+    <div id="compass" class="pbtn sq" aria-hidden="true">北</div>
+    <div id="scalebar"><i></i><span>100 米</span></div>
+    <button id="enter" class="pbtn big">进去逛逛</button>
+    <footer id="foot">
+      <div id="hint" class="note"></div>
+      <div id="credit" class="note">地图数据 © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> 贡献者（ODbL）；地物与楼名参照北京科技大学官方校园地图</div>
+    </footer>
+
+    <div id="walkui" hidden>
+      <div class="bar top">
+        <button id="netBtn" class="pbtn"><i class="dot"></i><span id="netText">单人</span></button>
+        <button id="chatBtn" class="pbtn">聊天</button>
+        <button id="setBtn" class="pbtn">设置</button>
+      </div>
+      <div id="miniWrap">
+        <canvas id="mini" width="120" height="120" aria-label="小地图，点按打开地图"></canvas>
+        <div id="clock" class="pbtn"></div>
+      </div>
+      <div id="chatlog" aria-live="polite"></div>
+      <div id="place" class="note"></div>
+      <button id="act" class="pbtn big" hidden></button>
+    </div>
+
+    <form id="chatform" hidden>
+      <input id="chatInput" maxlength="80" autocomplete="off" enterkeyhint="send" placeholder="说点什么（同组可见）" />
+      <button class="pbtn" type="submit">发送</button>
+    </form>
+
+    <div id="sheet" hidden>
+      <div class="panel" role="dialog" aria-modal="true">
+        <div class="head"><b id="sheetTitle"></b><button id="sheetClose" class="pbtn sq" aria-label="关闭">×</button></div>
+        <div id="sheetBody"></div>
+      </div>
+    </div>
+    <div id="toast" class="note" hidden></div>
+    <div id="loading"><b>像素北科</b><div class="prog"><i id="progBar"></i></div><span id="loadText">正在加载地图…</span></div>
+  </div>
+  <!--SCRIPT-->
+</body>
+</html>

@@ -1,0 +1,18 @@
+{
+  "name": "vmap",
+  "version": "27.0.1",
+  "private": true,
+  "description": "像素北科：北京科技大学像素风校园地图与多人游览",
+  "type": "module",
+  "scripts": {
+    "build": "bun scripts/build.ts",
+    "dev": "bun scripts/build.ts --watch",
+    "start": "node server/index.js",
+    "map": "tools/.venv/bin/python tools/build_map.py",
+    "check": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "typescript": "^5.6.0"
+  },
+  "license": "GPL-3.0-only"
+}
