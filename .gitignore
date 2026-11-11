@@ -1,0 +1,5 @@
+.temp/
+tools/.cache/
+node_modules/
+dist/
+tools/.venv/
