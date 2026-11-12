@@ -91,6 +91,10 @@ import { attachRealtime } from './server/realtime.js';
 attachRealtime(httpServer, { path: '/ws', roomCap: 50 });
 ```
 
+## 开发
+
+见 [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md)。
+
 ## 许可
 
 代码：GPL-3.0（见 LICENSE）。地图数据 © OpenStreetMap 贡献者，ODbL。楼名与地物参照北京科技大学官方校园地图。
