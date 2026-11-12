@@ -44,6 +44,21 @@ export function pack(c: RGB, a = 255): number {
   return ((a << 24) | ((c[2] & 255) << 16) | ((c[1] & 255) << 8) | (c[0] & 255)) >>> 0;
 }
 
+/** Draw a segment `t` pixels wide, centred on the line, into a w x h pixel buffer. */
+export function strokeSeg(buf: Uint32Array, w: number, h: number, ax: number, ay: number, bx: number, by: number, c: number, t: number) {
+  const dx = bx - ax, dy = by - ay;
+  const flat = Math.abs(dx) >= Math.abs(dy);
+  const n = Math.max(1, Math.ceil(flat ? Math.abs(dx) : Math.abs(dy)));
+  for (let i = 0; i <= n; i++) {
+    const x = ax + (dx * i) / n, y = ay + (dy * i) / n;
+    const px = flat ? Math.floor(x) : Math.round(x - t / 2), py = flat ? Math.round(y - t / 2) : Math.floor(y);
+    for (let j = 0; j < t; j++) {
+      const qx = flat ? px : px + j, qy = flat ? py + j : py;
+      if (qx >= 0 && qy >= 0 && qx < w && qy < h) buf[qy * w + qx] = c;
+    }
+  }
+}
+
 /** Pixel buffer for procedural sprites. */
 export class Pix {
   readonly data: Uint32Array;

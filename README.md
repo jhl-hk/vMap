@@ -43,7 +43,7 @@ src/            浏览器端（TypeScript，Canvas 2D，无运行时依赖）
 shared/         客户端与服务端共用的二进制协议
 server/         零依赖服务端：静态文件 + WebSocket（ws.js 为最小 RFC 6455 实现）
 tools/          地图数据生成脚本（Python）
-public/data/    生成好的地图数据：campus.json、ground.png
+public/data/    生成好的地图数据：campus.json、ground.png、roofs.webp
 scripts/        构建脚本
 ```
 
@@ -58,13 +58,22 @@ python3 -m venv tools/.venv && tools/.venv/bin/pip install -r tools/requirements
 bun run map
 ```
 
-- 楼宇轮廓、道路、运动场、水面、校园边界、校门：`source/*.osm.pbf`（OpenStreetMap）。
-- 地面类型（草地、铺装、沥青、跑道、球场）、树木位置与种类、屋顶颜色、楼名与地点名：北京科技大学官方二维校园地图（瓦片与标注缓存于 `tools/.cache/`）。
-- 官方瓦片按标注与 OSM 同名要素做仿射配准（RANSAC），比例尺取自 OSM 坐标。
-- 跑道分道线、足球场与单片球场的标线按 OSM 运动场多边形程序化绘制。
-- 楼层数：OSM `building:levels`，其次 `tools/build_map.py` 中的 `HEIGHT_OVERRIDES`，再按楼宇类型估计。
+- 校园边界、校门、校外的楼宇、道路与水面、楼层标签：`source/*.osm.pbf`（OpenStreetMap）。
+- 校内楼宇轮廓、地面类型（草地、铺装、沥青、跑道、球场、水面）、球场标线、树木位置与种类、屋顶颜色、楼名与地点名：北京科技大学官方二维校园地图（瓦片、轮廓与标注缓存于 `tools/.cache/`）。
+- 官方地图没有轮廓的校内楼宇使用 OSM 轮廓。
+- 官方地图到米制坐标为仿射变换：先按标注与 OSM 同名要素粗配（RANSAC），再按官方楼宇轮廓与 OSM 楼宇的重叠配对拟合。比例尺取自 OSM 坐标，经纬度按 WGS-84 椭球换算为米。
+- 世界坐标轴与官方地图一致：操场直道为纵向，相对正北约偏 2°。
+- 每棵树对应影像中的一个树冠。
+- 标线为矢量折线（`campus.json` 的 `lines`，按颜色与宽度分组，坐标单位 1/20 米，宽度单位 1/16 米）。沿坐标轴的直线按整段提取，端点接到相交的线上；其余按笔画中心线描出。跑道分道线按影像拟合出的跑道形状与道宽绘制。
+- 球场与广场上宽度不超过 1.5 米的彩色色带与边线（如五环广场的五色线与圆环、羽毛球场的红色边框）同样作为带颜色和宽度的线。
+- 楼宇轮廓与标线中，与坐标轴夹角小于 3° 的边取正。
+- 楼层数：OSM `building:levels`，其次 `tools/build_map.py` 中的 `HEIGHT_OVERRIDES`，其次官方渲染图中该楼的影长（各墙面测得的影长一致时采用），再按楼宇类型估计。
+- 小物件（自行车停放区、快递柜、拳击器材架、雕像、景观石）：官方地图的同名轮廓。乒乓球台按影像中每张球台的白色边框逐张定位。
+- 路面白线与黄线、球场标线均取自官方地图最细一级瓦片。
 
-`ground.png` 为调色板 PNG，每米 2 格，像素值即地面类型（与 `src/config.ts` 的 `G` 一致）。
+`ground.png` 为调色板 PNG，每米 4 格，像素值即地面类型（与 `src/config.ts` 的 `G` 一致）。`roofs.webp` 与它同一网格，是官方渲染图在官方楼宇轮廓内的部分，用作屋顶贴图。
+
+重新生成会下载约 1700 张官方瓦片，占用约 4 GB 内存。
 
 ## 多人服务
 

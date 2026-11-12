@@ -1,15 +1,15 @@
 import { G } from './config';
 import type { World } from './data';
 
-/** Blocking grid, 2 cells per metre (same grid as the ground raster). */
+/** Blocking grid on the grid of the ground raster. */
 export class Collision {
-  readonly res = 2;
+  readonly res: number;
   readonly gw: number;
   readonly gh: number;
   readonly grid: Uint8Array;
 
   constructor(w: World, gateRadius = 7) {
-    const res = this.res;
+    const res = this.res = w.res;
     this.gw = Math.ceil(w.w * res);
     this.gh = Math.ceil(w.h * res);
     const c = document.createElement('canvas');
@@ -54,13 +54,15 @@ export class Collision {
       for (let i = 0; i < this.gw * hgt; i++) if (a[i * 4 + 3] > 110) this.grid[y0 * this.gw + i] = 1;
     }
     c.width = c.height = 0;
-    if (w.gw === this.gw) {
-      for (let i = 0; i < this.grid.length; i++) if (w.ground[i] === G.Water) this.grid[i] = 2;
-    }
-    // tree trunks
+    for (let i = 0; i < this.grid.length; i++) if (w.ground[i] === G.Water) this.grid[i] = 2;
+    // tree trunks, half a metre across
+    const half = 0.25;
     for (let i = 0; i < w.tx.length; i++) {
-      const x = Math.floor(w.tx[i] * res), y = Math.floor(w.ty[i] * res - 0.2);
-      if (x >= 0 && y >= 0 && x < this.gw && y < this.gh) this.grid[y * this.gw + x] = 3;
+      for (let y = Math.floor((w.ty[i] - 0.1 - half) * res); y < (w.ty[i] - 0.1 + half) * res; y++) {
+        for (let x = Math.floor((w.tx[i] - half) * res); x < (w.tx[i] + half) * res; x++) {
+          if (x >= 0 && y >= 0 && x < this.gw && y < this.gh) this.grid[y * this.gw + x] = 3;
+        }
+      }
     }
   }
 

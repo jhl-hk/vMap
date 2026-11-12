@@ -1,6 +1,6 @@
 import { CHUNK, OV_PPM, PPM, VSCALE } from '../config';
-import type { Building, Label, World } from '../data';
-import { css, inPoly } from '../util';
+import type { Building, Label, Prop, World } from '../data';
+import { css, hash2, inPoly } from '../util';
 import { Buildings, footMaxY } from './buildings';
 import { CH, drawChar, frameOf } from './chars';
 import { GroundCache } from './ground';
@@ -31,7 +31,7 @@ export interface Poi {
 
 interface Item {
   key: number;
-  type: 0 | 1 | 2 | 3 | 4; // building, tree, actor, fence, post
+  type: 0 | 1 | 2 | 3 | 4 | 5; // building, tree, actor, fence, post, prop
   i: number;
   x0: number; x1: number; y0: number; y1: number; // screen box in world texels
   fx: number; fy: number; // foot point (metres) for occlusion tests
@@ -55,7 +55,7 @@ export class View {
 
   constructor(readonly world: World, season: Season) {
     this.ground = new GroundCache(world, season);
-    this.buildings = new Buildings(world.buildings, season);
+    this.buildings = new Buildings(world.buildings, season, world.roofs, world.res);
     this.trees = new TreeSprites(season);
     for (let i = 0; i < world.tx.length; i++) {
       const k = Math.floor(world.ty[i] / TREE_BUCKET) * 1000 + Math.floor(world.tx[i] / TREE_BUCKET);
@@ -179,6 +179,13 @@ export class View {
       items.push({ key: p.y, type: 4, i, x0: x - 14, x1: x + 14, y0: y - 26, y1: y + 2, fx: p.x, fy: p.y });
     }
 
+    for (let i = 0; i < w.props.length; i++) {
+      const p = w.props[i];
+      const x0 = p.x * PPM - 4, x1 = (p.x + p.w) * PPM + 4, y0 = p.y * PPM - 40, y1 = (p.y + p.d) * PPM + 2;
+      if (x1 < vx0 || x0 > vx1 || y1 < vy0 || y0 > vy1) continue;
+      items.push({ key: p.y + p.d, type: 5, i, x0, x1, y0, y1, fx: p.x + p.w / 2, fy: p.y + p.d });
+    }
+
     // sprites standing south of a building's footprint (at their x) go in front of it even if the
     // building reaches further south elsewhere (L-shapes, courtyards)
     for (const it of items) {
@@ -246,6 +253,9 @@ export class View {
           break;
         case 4:
           this.drawPost(ctx, this.pois[it.i]);
+          break;
+        case 5:
+          drawProp(ctx, w.props[it.i], it.i);
           break;
       }
     }
@@ -347,5 +357,84 @@ export class View {
   /** Roof label anchor for a building (metres, shifted up by the drawn height in the overview). */
   static roofAnchor(b: Building): [number, number] {
     return [b.cx, b.cy - (b.h * VSCALE * 0.9)];
+  }
+}
+
+const BIKE = ['#c0392b', '#2f6db5', '#e0b030', '#3d8a4f', '#5b5f66', '#d9d9d9'];
+
+/** Small things from the official map, drawn inside their box (metres) in world texels. */
+function drawProp(ctx: CanvasRenderingContext2D, p: Prop, seed: number) {
+  const x0 = Math.round(p.x * PPM), y0 = Math.round(p.y * PPM), w = Math.round(p.w * PPM), d = Math.round(p.d * PPM);
+  const rect = (c: string, x: number, y: number, ww: number, hh: number) => { ctx.fillStyle = c; ctx.fillRect(x, y, ww, hh); };
+  switch (p.k) {
+    case 'bikes': {
+      // rows of parked bikes seen from above, handlebars up
+      for (let y = y0 + 12; y <= y0 + Math.max(d, 12); y += 30) {
+        for (let x = x0 + 2, n = 0; x + 5 <= x0 + Math.max(w, 7); x += 9, n++) {
+          if (hash2(n, y, seed) % 5 === 0) continue;
+          rect('rgba(0,0,0,0.22)', x + 1, y - 1, 5, 2);
+          rect('#26282c', x + 1, y - 12, 2, 4);
+          rect('#26282c', x + 1, y - 3, 2, 4);
+          rect(BIKE[hash2(n, y, seed + 1) % BIKE.length], x + 1, y - 9, 2, 7);
+          rect('#1c1d20', x, y - 6, 4, 2);
+          rect('#8f949b', x - 1, y - 10, 6, 1);
+        }
+      }
+      break;
+    }
+    case 'lockers': {
+      const along = w >= d;
+      for (let k = 0; k < Math.max(1, Math.floor((along ? w : d) / PPM)); k++) {
+        const x = along ? x0 + k * PPM : x0, y = along ? y0 + d : y0 + (k + 1) * PPM;
+        rect('#d8dadc', x, y - 30, PPM, 30);
+        rect('#e9772b', x, y - 32, PPM, 4);
+        rect('#aeb2b6', x + PPM - 1, y - 28, 1, 28);
+        for (let r = 1; r < 4; r++) rect('#aeb2b6', x, y - 28 + r * 7, PPM, 1);
+      }
+      break;
+    }
+    case 'table': {
+      // one table-tennis table, top raised above its shadow, net across the middle
+      const y = y0 + d, top = y - 9 - d;
+      rect('rgba(0,0,0,0.2)', x0 + 2, y - 3, w, 4);
+      rect('#4b4f55', x0 + 2, y - 9, 2, 9); rect('#4b4f55', x0 + w - 4, y - 9, 2, 9);
+      rect('#1f5fa8', x0, top, w, d);
+      rect('#f1f1ec', x0, top, w, 1); rect('#f1f1ec', x0, top + d - 1, w, 1); rect('#f1f1ec', x0, top, 1, d); rect('#f1f1ec', x0 + w - 1, top, 1, d);
+      if (w >= d) { rect('#f1f1ec', x0, top + (d >> 1), w, 1); rect('#dfe3e6', x0 + (w >> 1) - 1, top - 3, 2, d + 3); }
+      else { rect('#f1f1ec', x0 + (w >> 1), top, 1, d); rect('#dfe3e6', x0, top + (d >> 1) - 3, w, 3); }
+      break;
+    }
+    case 'cage': {
+      // a frame of steel bars: posts, top rails, and the rails across
+      const y = y0 + d, hgt = 40, bar = '#2f4fa8', far = '#243c82';
+      for (let x = x0; x <= x0 + w; x += Math.max(8, Math.round(w / Math.max(1, Math.round(w / 40))))) {
+        rect(far, x, y0 - hgt, 2, hgt);
+        rect(far, x, y0 - hgt, 2, d);
+      }
+      rect(far, x0, y0 - hgt, w + 2, 2);
+      for (let yy = y0 + 24; yy < y; yy += 24) rect(bar, x0, yy - hgt, w + 2, 2);
+      for (let x = x0; x <= x0 + w; x += Math.max(8, Math.round(w / Math.max(1, Math.round(w / 40))))) rect(bar, x, y - hgt, 2, hgt);
+      rect(bar, x0, y - hgt, w + 2, 2);
+      break;
+    }
+    case 'statue': {
+      const x = x0 + (w >> 1), y = y0 + d;
+      rect('rgba(0,0,0,0.25)', x - 9, y - 1, 20, 3);
+      rect('#b9b4a8', x - 8, y - 12, 16, 12);
+      rect('#d2cdc2', x - 8, y - 13, 16, 2);
+      rect('#7a5a36', x - 4, y - 34, 8, 22);
+      rect('#96703f', x - 4, y - 34, 3, 22);
+      rect('#7a5a36', x - 3, y - 40, 6, 6);
+      break;
+    }
+    case 'rock': {
+      const x = x0 + (w >> 1), y = y0 + d;
+      rect('rgba(0,0,0,0.25)', x - 12, y - 1, 26, 3);
+      rect('#8d8f8c', x - 11, y - 12, 22, 12);
+      rect('#a7a9a5', x - 8, y - 18, 15, 7);
+      rect('#bfc1bc', x - 6, y - 18, 6, 3);
+      rect('#74767a', x + 6, y - 9, 5, 9);
+      break;
+    }
   }
 }

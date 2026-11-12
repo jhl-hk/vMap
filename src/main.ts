@@ -13,6 +13,7 @@ import { clamp, inPoly } from './util';
 
 declare const __CAMPUS_URL__: string;
 declare const __GROUND_URL__: string;
+declare const __ROOFS_URL__: string;
 
 const KIND_NAME: Record<string, string> = {
   teach: '教学科研', dorm: '学生宿舍', home: '家属住宅', hall: '场馆', canteen: '餐厅', tower: '大厦', roof: '构筑物', misc: '建筑',
@@ -549,12 +550,13 @@ async function boot() {
   initSheet();
   const bar = $('progBar');
   bar.style.width = '15%';
-  world = await loadWorld({ campus: __CAMPUS_URL__, ground: __GROUND_URL__ }, (p) => (bar.style.width = `${Math.round(p * 70)}%`));
+  world = await loadWorld({ campus: __CAMPUS_URL__, ground: __GROUND_URL__, roofs: __ROOFS_URL__ }, (p) => (bar.style.width = `${Math.round(p * 70)}%`));
   const { month, hour, minute } = beijingNow();
   season = profile.season === 'auto' ? seasonOf(month) : profile.season;
   $('loadText').textContent = '正在绘制像素…';
   await new Promise((r) => setTimeout(r, 0));
   view = new View(world, season);
+  world.roofs.close();
   coll = new Collision(world);
   bar.style.width = '85%';
   await new Promise((r) => setTimeout(r, 0));

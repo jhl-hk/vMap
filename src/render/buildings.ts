@@ -33,6 +33,8 @@ export interface BuildingGeo {
   wall: RGB;
   roofColor: RGB;
   solar: boolean;
+  /** Roof drawn from the official render: image and its box at ground level, world texels. */
+  tex: { img: HTMLCanvasElement; x: number; y: number; w: number; h: number } | null;
   /** Screen-space bounds in world texels (roof included). */
   sx0: number; sx1: number; sy0: number; sy1: number;
 }
@@ -143,7 +145,17 @@ export class Buildings {
   private solarPat: CanvasPattern | null = null;
   night = false;
 
-  constructor(list: Building[], private season: Season) {
+  private roofTex: Array<BuildingGeo['tex']>;
+
+  /** `roofs`: the official render of the roofs, `res` pixels per metre. */
+  constructor(list: Building[], private season: Season, roofs: ImageBitmap, res: number) {
+    this.roofTex = list.map((b) => {
+      if (!b.tex) return null;
+      const x = Math.floor(b.minx * res), y = Math.floor(b.miny * res);
+      const [img, ctx] = canvas(Math.ceil(b.maxx * res) - x, Math.ceil(b.maxy * res) - y);
+      ctx.drawImage(roofs, -x, -y);
+      return { img, x: (x / res) * PPM, y: (y / res) * PPM, w: (img.width / res) * PPM, h: (img.height / res) * PPM };
+    });
     this.geo = list.map((b) => this.make(b));
   }
 
@@ -189,7 +201,8 @@ export class Buildings {
     // rooftop stair houses on larger roofs
     const boxes: BuildingGeo['boxes'] = [];
     const area = (b.maxx - b.minx) * (b.maxy - b.miny);
-    if (b.kind !== 'roof' && area > 260) {
+    const tex = this.roofTex[b.id];
+    if (!tex && b.kind !== 'roof' && area > 260) {
       const r = rng(b.id * 31 + 5);
       const tries = area > 2500 ? 3 : area > 900 ? 2 : 1;
       for (let k = 0; k < tries * 4 && boxes.length < tries; k++) {
@@ -219,7 +232,7 @@ export class Buildings {
     let sy0 = Infinity;
     for (const bx of boxes) sy0 = Math.min(sy0, bx.y - bx.h);
     return {
-      b, ht, walls, roof, boxes, door, sign, wall, roofColor, solar,
+      b, ht, walls, roof, boxes, door, sign, wall, roofColor, solar, tex,
       sx0: b.minx * PPM - 1, sx1: b.maxx * PPM + 1, sy0: Math.min(sy0, b.miny * PPM - ht) - 2, sy1: b.maxy * PPM + 4,
     };
   }
@@ -295,7 +308,17 @@ export class Buildings {
     // roof
     ctx.fillStyle = css(g.roofColor);
     ctx.fill(g.roof, 'evenodd');
-    if (g.solar && this.season !== 'winter') {
+    if (g.tex) {
+      ctx.save();
+      ctx.clip(g.roof, 'evenodd');
+      ctx.imageSmoothingEnabled = false;
+      ctx.drawImage(g.tex.img, g.tex.x, g.tex.y - g.ht, g.tex.w, g.tex.h);
+      if (this.season === 'winter') {
+        ctx.fillStyle = 'rgba(238,243,246,0.7)';
+        ctx.fill(g.roof, 'evenodd');
+      }
+      ctx.restore();
+    } else if (g.solar && this.season !== 'winter') {
       ctx.save();
       ctx.clip(g.roof, 'evenodd');
       ctx.globalAlpha = 0.85;
@@ -303,8 +326,10 @@ export class Buildings {
       ctx.fill(g.roof, 'evenodd');
       ctx.restore();
     }
-    ctx.fillStyle = this.grain!;
-    ctx.fill(g.roof, 'evenodd');
+    if (!g.tex) {
+      ctx.fillStyle = this.grain!;
+      ctx.fill(g.roof, 'evenodd');
+    }
     ctx.lineWidth = 2;
     ctx.strokeStyle = css(shade(g.roofColor, 0.72));
     ctx.stroke(g.roof);

@@ -17,7 +17,7 @@ export const INTERP_MS = 140;
 
 /** Ground classes, keep in sync with tools/build_map.py. */
 export const enum G {
-  None = 0, Grass, Pave, Asph, Red, Turf, Blue, Water, LPave, Line, Urban, Sidewalk, Dirt,
+  None = 0, Grass, Pave, Asph, Red, Turf, Blue, Water, LPave, Urban, Sidewalk, Dirt,
 }
 
 export const STORAGE_KEY = 'vmap.profile.v1';

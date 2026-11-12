@@ -1,12 +1,12 @@
-import { G, OV_PPM, VSCALE } from '../config';
+import { G, OV_PPM, PPM, VSCALE } from '../config';
 import type { World } from '../data';
 import type { Season } from '../season';
-import { css, hash2, hex, mix, pack, shade, type RGB } from '../util';
+import { css, hash2, hex, mix, pack, shade, strokeSeg, type RGB } from '../util';
 import type { Buildings } from './buildings';
 
 const BASE: Record<number, string> = {
   [G.None]: '#2b2b33', [G.Grass]: '#6aa845', [G.Pave]: '#a9a69e', [G.Asph]: '#55575d', [G.Red]: '#b5533e',
-  [G.Turf]: '#52a248', [G.Blue]: '#3f6bb8', [G.Water]: '#3f80c6', [G.LPave]: '#cfcbc0', [G.Line]: '#f1f1ec',
+  [G.Turf]: '#52a248', [G.Blue]: '#3f6bb8', [G.Water]: '#3f80c6', [G.LPave]: '#cfcbc0',
   [G.Urban]: '#b9b4a8', [G.Sidewalk]: '#c6bfb0', [G.Dirt]: '#a3825a',
 };
 
@@ -33,14 +33,17 @@ export function buildOverview(w: World, season: Season, buildings: Buildings): H
     if (season === 'autumn' && +k === G.Grass) base = hex('#8aa347');
     pal[+k] = [0.94, 0.98, 1, 1.03].map((f) => pack(shade(base, f)));
   }
-  const line = pack(hex('#eeeeea'));
   const sx = w.gw / W, sy = w.gh / H;
   for (let y = 0; y < H; y++) {
     for (let x = 0; x < W; x++) {
       const gi = Math.floor(y * sy) * w.gw + Math.floor(x * sx);
       const g = w.ground[gi];
-      px[y * W + x] = w.lines[gi] ? line : (pal[g] ?? pal[G.Pave])[hash2(x, y) & 3];
+      px[y * W + x] = (pal[g] ?? pal[G.Pave])[hash2(x, y) & 3];
     }
+  }
+  for (let k = 0; k < w.segs.length; k += 4) {
+    const st = w.styles[w.segStyle[k / 4]];
+    strokeSeg(px, W, H, w.segs[k] * OV_PPM, w.segs[k + 1] * OV_PPM, w.segs[k + 2] * OV_PPM, w.segs[k + 3] * OV_PPM, st.color, Math.max(1, Math.round((st.w / PPM) * OV_PPM)));
   }
   ctx.putImageData(img, 0, 0);
 
@@ -96,6 +99,18 @@ export function buildOverview(w: World, season: Season, buildings: Buildings): H
     }
     ctx.fillStyle = css(g.roofColor);
     ctx.fill('evenodd');
+    if (g.tex) {
+      const k = OV_PPM / PPM;
+      ctx.save();
+      ctx.clip('evenodd');
+      ctx.imageSmoothingEnabled = true;
+      ctx.drawImage(g.tex.img, g.tex.x * k, g.tex.y * k - ht, g.tex.w * k, g.tex.h * k);
+      if (season === 'winter') {
+        ctx.fillStyle = 'rgba(238,243,246,0.7)';
+        ctx.fillRect(g.tex.x * k, g.tex.y * k - ht, g.tex.w * k, g.tex.h * k);
+      }
+      ctx.restore();
+    }
     ctx.strokeStyle = css(shade(g.roofColor, 0.7));
     ctx.lineWidth = 1;
     ctx.stroke();

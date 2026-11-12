@@ -32,6 +32,7 @@ async function build() {
   mkdirSync(ASSETS, { recursive: true });
   const campus = copyHashed(join(ROOT, 'public/data/campus.json'), 'campus', 'json');
   const ground = copyHashed(join(ROOT, 'public/data/ground.png'), 'ground', 'png');
+  const roofs = copyHashed(join(ROOT, 'public/data/roofs.webp'), 'roofs', 'webp');
   const out = await Bun.build({
     entrypoints: [join(ROOT, 'src/main.ts')],
     outdir: ASSETS,
@@ -40,7 +41,7 @@ async function build() {
     format: 'esm',
     minify: true,
     sourcemap: 'none',
-    define: { __CAMPUS_URL__: JSON.stringify(campus), __GROUND_URL__: JSON.stringify(ground) },
+    define: { __CAMPUS_URL__: JSON.stringify(campus), __GROUND_URL__: JSON.stringify(ground), __ROOFS_URL__: JSON.stringify(roofs) },
   });
   if (!out.success) {
     for (const l of out.logs) console.error(l);
